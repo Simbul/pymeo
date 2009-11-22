@@ -26,5 +26,5 @@ setup(
     author='Alessandro Morandi',
     author_email='webmaster@simbul.net',
     packages=['pymeo'],
-    install_requires=['oauth', 'urllib2', 'json'],
+    install_requires=['oauth'],
 )
