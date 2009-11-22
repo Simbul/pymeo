@@ -45,9 +45,13 @@ class PymeoFeed(object):
     def __init__(self, json_feed, method, params):
         json = json_feed.copy()
         self.on_this_page = int(json.pop('on_this_page'))
-        self.total = int(json.pop('total'))
         self.perpage = int(json.pop('perpage'))
         self.page = int(json.pop('page'))
+        
+        if 'total' in json:
+            self.total = int(json.pop('total'))
+        else:
+            self.total = None
         
         self.method = method
         self.params = params
@@ -66,12 +70,6 @@ class PymeoFeed(object):
             self.__current += 1
             return PymeoFeedItem(self.__entries[self.__current-1])
     
-    def is_last_page(self):
-        """
-            Return whether this is the last page.
-        """
-        return (self.page * self.perpage >= self.total)
-
 # {u'stat': u'ok', u'generated_in': u'0.2642',
 #  u'videos': {
     # u'on_this_page': u'2', u'total': u'2', u'perpage': u'50',
@@ -83,26 +81,50 @@ class PymeoFeed(object):
 # }
 
 class Pymeo(OAuthConsumer):
+    """
+        This class is a wrapper for Vimeo APIs.
+        
+        It wraps both simple and advanced APIs, even though the interface is
+        based on the advanced API only.
+        When the class is missing the consumer key and the consumer secret,
+        it falls back automatically to the simple API. Otherwise the advanced
+        API is used.
+    """
     BASE_URL = "http://vimeo.com/api/rest/v2/"
     AUTH_URL = "http://vimeo.com/services/auth/"
+    SIMPLE_URL = 'http://vimeo.com/api/v2/'
     
-    def __init__(self, c_key, c_secret):
+    def __init__(self, c_key=None, c_secret=None):
         OAuthConsumer.__init__(self, c_key, c_secret)
         self.signature_method = OAuthSignatureMethod_HMAC_SHA1()
+    
+    def is_advanced(self):
+        """
+            Return whether the instance is based on the advanced API.
+            
+            An instance not based on the advanced API will use the simple API.
+        """
+        return (self.key is not None and self.secret is not None)
     
     def get_feed(self, method, params):
         """
             Get a feed of items returned from a specific method.
             
+            Return None when the feed is empty.
+            
             @param method A string representing a Vimeo method
             @param params A dict of parameters for the method
         """
         json_res = self.function_call(method, params)
+        
+        if json_res is None:
+            return None
+        
         for v in json_res.values():
             if isinstance(v, dict):
                 return PymeoFeed(v, method, params)
         
-        raise Error('The requested method cannot return a feed')
+        raise Exception('The requested method cannot return a feed')
     
     def get_next_feed(self, feed):
         """
@@ -111,7 +133,9 @@ class Pymeo(OAuthConsumer):
             The next feed is basically the next page of items.
             If there are no more pages, return None.
         """
-        if feed.is_last_page():
+        if feed.total is not None and (feed.page * feed.perpage >= feed.total):
+            # It was an advanced feed: we can tell if it's the last one
+            #  without making any call
             return None
         else:
             params = feed.params.copy()
@@ -122,9 +146,55 @@ class Pymeo(OAuthConsumer):
         if method[0:6] != "vimeo.":
             method = "vimeo." + method
         
-        return self.request(method, params)
+        if self.is_advanced():
+            json_res = self.request_advanced(method, params)
+        else:
+            json_res = self.translate_simple_call(method, params)
+        return json_res
     
-    def request(self, method, params, base_url=None):
+    def translate_simple_call(self, method, params, base_url=None):
+        """
+            Translate an advanced call to a simple one.
+        """
+        context = identifier = request = None
+
+        if method == 'vimeo.people.getInfo':
+            identifier = params['user_id']
+            request = 'info'
+        elif method == 'vimeo.videos.getLikes':
+            identifier = params['user_id']
+            request = 'likes'
+        elif method == 'vimeo.videos.getUploaded':
+            identifier = params['user_id']
+            request = 'videos'
+        
+        if 'page' in params:
+            query = { 'page': params['page'] }
+        else:
+            query = None
+        json = self.request_simple(context, identifier, request, query)
+        
+        if len(json) == 0:
+            # No results
+            return None
+        
+        if 'page' in params:
+            page = params['page']
+        else:
+            page = 1
+        
+        json_res = {
+            u'stat': u'ok-simple',
+            u'feed': {
+                u'on_this_page': len(json),
+                u'perpage': 20,
+                u'page': page,
+                u'items': json,
+            }
+        }
+        return json_res
+    
+    def request_advanced(self, method, params, base_url=None):
         url = base_url or Pymeo.BASE_URL
         
         # Build the OAuth part of the request
@@ -157,7 +227,47 @@ class Pymeo(OAuthConsumer):
             )
         
         return out
+    
+    def request_simple(self, identifier, request, context=None, query=None, base_url=None):
+        """
+            Perform a Simple API request.
+
+            This will call a URL such as (for example)
+            http://vimeo.com/api/v2/activity/someuser/user_did.json?page=1
+
+            @param context The context of the request, e.g. "activity"
+            @param identifier The id for the request, e.g. "username"
+            @param request The type of request, e.g. "user_did"
+            @param query A dict representing a query to append, e.g {'page':1}
+        """
+        url = base_url or Pymeo.SIMPLE_URL
+
+        if context is not None:
+            url += context + "/"
+
+        url += identifier + "/"
+        url += request + ".json"
         
+        if query is not None:
+            q = "?"
+            for k, v in query.iteritems():
+                q += "%s=%s&" % (k, v)
+            url += q
+
+        # Build actual HTTP Request
+        req = urllib2.Request(url)
+        req.add_header("User-Agent", "pymeo/0.1")
+
+        # Perform request
+        out = []
+        try:
+            f = urllib2.urlopen(req)
+            out = json.loads(f.read())
+        except urllib2.URLError, e:
+            print "urllib error", e, e.filename
+
+        return out
+    
 
 class User(object):
     def __init__(self, username):
