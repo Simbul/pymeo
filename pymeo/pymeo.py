@@ -172,7 +172,12 @@ class Pymeo(OAuthConsumer):
             query = { 'page': params['page'] }
         else:
             query = None
-        json = self.request_simple(context, identifier, request, query)
+        json = self.request_simple(
+            context=context,
+            identifier=identifier,
+            request=request,
+            query=query
+        )
         
         if len(json) == 0:
             # No results
@@ -217,7 +222,7 @@ class Pymeo(OAuthConsumer):
             f = urllib2.urlopen(req)
             out = json.loads(f.read())
         except urllib2.URLError, e:
-            print "urllib error", e, e.filename
+            raise Exception('Could not perform request: %s' % e.filename)
         if 'err' in out:
             # Vimeo returned an error message -> raise an exception
             raise VimeoException(
@@ -264,7 +269,7 @@ class Pymeo(OAuthConsumer):
             f = urllib2.urlopen(req)
             out = json.loads(f.read())
         except urllib2.URLError, e:
-            print "urllib error", e, e.filename
+            raise Exception('Could not perform request: %s' % e.filename)
 
         return out
     
