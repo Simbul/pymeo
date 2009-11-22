@@ -33,9 +33,12 @@ class VimeoException(Exception):
         return out
     
 
-class Video(dict):
+class PymeoFeedItem(object):
     def __init__(self, json):
-        self.update(json)
+        self.__entry = json
+    
+    def __getattr__(self, name):
+        return self.__entry[name]
     
 
 class PymeoFeed(object):
@@ -61,7 +64,7 @@ class PymeoFeed(object):
             raise StopIteration
         else:
             self.__current += 1
-            return Video(self.__entries[self.__current-1])
+            return PymeoFeedItem(self.__entries[self.__current-1])
     
     def is_last_page(self):
         """
