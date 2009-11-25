@@ -40,6 +40,16 @@ class PymeoFeedItem(object):
     def __getattr__(self, name):
         return self.__entry[name]
     
+    def to_video(self):
+        return PymeoVideo(self.__entry)
+    
+    def __repr__(self):
+        return unicode(self.__entry)
+    
+
+class PymeoVideo(PymeoFeedItem):
+    pass
+    
 
 class PymeoFeed(object):
     def __init__(self, json_feed, method, params):
@@ -63,6 +73,7 @@ class PymeoFeed(object):
     def __iter__(self):
         return self
     
+    # TODO: check why the iterator can only be walked once
     def next(self):
         if self.__current >= len(self.__entries):
             raise StopIteration
@@ -105,6 +116,11 @@ class Pymeo(OAuthConsumer):
             An instance not based on the advanced API will use the simple API.
         """
         return (self.key is not None and self.secret is not None)
+    
+    def get_video(self, video_id):
+        feed = self.get_feed('videos.getInfo', {'video_id': video_id})
+        for item in feed:
+            return item.to_video()
     
     def get_feed(self, method, params):
         """
@@ -167,6 +183,11 @@ class Pymeo(OAuthConsumer):
         elif method == 'vimeo.videos.getUploaded':
             identifier = params['user_id']
             request = 'videos'
+        elif method == 'vimeo.videos.getInfo':
+            context = 'video'
+            identifier = params['video_id']
+        else:
+            raise NotImplementedError('Method %s has not been implemented yet' % method)
         
         if 'page' in params:
             query = { 'page': params['page'] }
@@ -233,7 +254,7 @@ class Pymeo(OAuthConsumer):
         
         return out
     
-    def request_simple(self, identifier, request, context=None, query=None, base_url=None):
+    def request_simple(self, identifier, request=None, context=None, query=None, base_url=None):
         """
             Perform a Simple API request.
 
@@ -250,8 +271,10 @@ class Pymeo(OAuthConsumer):
         if context is not None:
             url += context + "/"
 
-        url += identifier + "/"
-        url += request + ".json"
+        url += str(identifier)
+        if request is not None:
+            url += "/" + request
+        url += ".json"
         
         if query is not None:
             q = "?"
