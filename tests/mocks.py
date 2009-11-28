@@ -50,6 +50,13 @@ def dummy_urlopen(req):
                     '{"id":"7545734","liked_on":"2009-11-15 05:00:40","owner":"243010","title":"Title2","privacy":"anybody","is_hd":"1"},'\
                     '{"id":"7112182","liked_on":"2009-11-15 04:54:49","owner":"807018","title":"Title3","privacy":"anybody","is_hd":"0"}'\
                     ']}}'
+            elif method == 'vimeo.videos.getInfo':
+                j = '{"stat":"ok","generated_in":"0.3170","video":{'\
+                    '"id":"7545734","privacy":"anybody","is_uploading":"0","is_transcoding":"0","is_hd":"1","is_favorite":"1","liked_on":"2009-11-15 05:00:40",'\
+                    '"title":"Title1","caption":"Caption1","upload_date":"2009-11-11 05:58:15","number_of_likes":"385","number_of_plays":"23971","number_of_comments":"24",'\
+                    '"width":"640","height":"360","duration":"352","owner":{"nsid":"243010","id":"243010","username":"rocketboom","fullname":"Rocketboom"},"tags":{'\
+                    '"tag":[{"id":"18448553","author":"","raw":"auto tune","_content":"auto tune"},{"id":"18448554","author":"","raw":"internet","_content":"internet"}]'\
+                    '},"urls":{"url":{"type":"videopage","_content":"http:\/\/vimeo.com\/7545734\/l:app-2992"}},"thumbnails":{"thumbnail":[{"width":"100","height":"75","_content":"http:\/\/ts.vimeo.com.s3.amazonaws.com\/327\/289\/32728953_100.jpg"},{"width":"200","height":"150","_content":"http:\/\/ts.vimeo.com.s3.amazonaws.com\/327\/289\/32728953_200.jpg"},{"width":"640","height":"360","_content":"http:\/\/ts.vimeo.com.s3.amazonaws.com\/327\/289\/32728953_640.jpg"}]}}}'
             else:
                 raise NotImplementedError('Method %s not supported by the mock urlopen method' % method)
         
@@ -57,7 +64,8 @@ def dummy_urlopen(req):
         # Simple API
         params = url.replace(Pymeo.SIMPLE_URL, "").split("/")
         if params[0] == 'video':
-            pass
+            v_id = params[1].replace('.json', '')
+            j = '[{"id":"7545734","title":"Title1","description":"Description1","url":"http:\/\/vimeo.com\/7545734","upload_date":"2009-11-11 05:58:15","thumbnail_small":"http:\/\/ts.vimeo.com.s3.amazonaws.com\/327\/289\/32728953_100.jpg","thumbnail_medium":"http:\/\/ts.vimeo.com.s3.amazonaws.com\/327\/289\/32728953_200.jpg","thumbnail_large":"http:\/\/ts.vimeo.com.s3.amazonaws.com\/327\/289\/32728953_640.jpg","user_name":"Rocketboom","user_url":"http:\/\/vimeo.com\/rocketboom","user_portrait_small":"http:\/\/images.vimeo.com\/11\/28\/69\/112869861\/112869861_30.jpg","user_portrait_medium":"http:\/\/images.vimeo.com\/11\/28\/69\/112869861\/112869861_75.jpg","user_portrait_large":"http:\/\/images.vimeo.com\/11\/28\/69\/112869861\/112869861_100.jpg","user_portrait_huge":"http:\/\/images.vimeo.com\/11\/28\/69\/112869861\/112869861_300.jpg","stats_number_of_likes":"385","stats_number_of_plays":"23971","stats_number_of_comments":24,"duration":"352","width":"640","height":"360","tags":"auto tune, internet, meme, music, mashup, remix"}]'
         elif params[0] == 'activity':
             pass
         elif params[0] == 'group':

@@ -3,6 +3,7 @@ sys.path.append('.')
 sys.path.append('..')
 
 import unittest
+from ConfigParser import ConfigParser
 
 from pymeo import pymeo
 import mocks
@@ -10,13 +11,19 @@ import mocks
 # Comment the following line to run the test against the remote server
 pymeo.urllib2.urlopen = mocks.dummy_urlopen
 
-consumer_key = ""  
-consumer_secret = ""
-
 class AdvancedTest(unittest.TestCase):
     def setUp(self):
         # Setup advanced API
-        self.__pymeo = pymeo.Pymeo(consumer_key, consumer_secret)
+        self.consumer_secret = self.consumer_key = None
+        
+        try:
+            config = ConfigParser()
+            config.read('configuration')
+            self.consumer_key = config.get('OAuth', 'consumer_key')
+            self.consumer_secret = config.get('OAuth', 'consumer_secret')
+        except:
+            pass
+        self.__pymeo = pymeo.Pymeo(self.consumer_key, self.consumer_secret)
     
     def test_advanced(self):
         self.assert_(self.__pymeo.is_advanced())
@@ -24,7 +31,7 @@ class AdvancedTest(unittest.TestCase):
     def test_echo(self):
         resp = self.__pymeo.request_advanced('vimeo.test.echo')
         self.__assert_advanced_response(resp)
-        self.assertEquals(resp['oauth_consumer_key'], consumer_key)
+        self.assertEquals(resp['oauth_consumer_key'], self.consumer_key)
     
     def test_wrongauth(self):
         pymeo_wrong = pymeo.Pymeo("wrongkey", "wrongsecret")
@@ -55,7 +62,7 @@ class AdvancedTest(unittest.TestCase):
         self.__assert_advanced_response(resp)
         self.assert_('videos' in resp)
         feed = resp['videos']
-        self.__assert_advanced_feed(feed)
+        self.__assert_json_feed(feed)
         self.assert_('video' in feed)
         self.assert_(isinstance(feed['video'], list))
     
@@ -64,7 +71,7 @@ class AdvancedTest(unittest.TestCase):
         self.assert_("stat" in resp)
         self.assert_("generated_in" in resp)
     
-    def __assert_advanced_feed(self, feed):
+    def __assert_json_feed(self, feed):
         self.assert_(isinstance(feed, dict))
         self.assert_('page' in feed)
         self.assert_('perpage' in feed)

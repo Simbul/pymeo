@@ -46,7 +46,49 @@ class SimpleTest(unittest.TestCase):
         for item in resp:
             self.assert_("id" in item)
             self.assert_("url" in item)
-
     
+    def test_get_feed(self):
+        feed = self.__pymeo.get_feed('videos.getLikes', {'user_id':2638277})
+        self.__assert_feed_object(feed)
+        self.assertEquals(feed.page, 1)
+        self.assertEquals(feed.perpage, 20)
+        self.assertEquals(feed.on_this_page, len(feed))
+    
+    def test_feed_iterate(self):
+        feed = self.__pymeo.get_feed('videos.getLikes', {'user_id':2638277})
+        i = 0
+        check_ids = []
+        for item in feed:
+            self.assert_('id' in item)
+            i += 1
+            check_ids.append(item)
+        
+        # Check length
+        self.assertEquals(i, len(feed))
+        
+        # Check replicability
+        for item in feed:
+            self.assert_('id' in item)
+            self.assertEquals(item.id, check_ids.pop(0).id)
+            i -= 1
+        self.assertEquals(i, 0)
+    
+    def test_get_video(self):
+        video = self.__pymeo.get_video(7545734)
+        self.__assert_feed_item(video)
+    
+    
+    def __assert_feed_object(self, feed):
+        self.assert_(isinstance(feed, pymeo.PymeoFeed))
+        self.assert_(hasattr(feed, 'on_this_page'))
+        self.assert_(hasattr(feed, 'perpage'))
+        self.assert_(hasattr(feed, 'page'))
+        self.assert_(hasattr(feed, 'method'))
+        self.assert_(hasattr(feed, 'params'))
+    
+    def __assert_feed_item(self, item):
+        self.assert_(isinstance(item, pymeo.PymeoFeedItem))
+    
+
 if __name__ == '__main__':
     unittest.main()

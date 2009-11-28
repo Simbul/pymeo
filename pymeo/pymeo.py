@@ -36,6 +36,7 @@ class VimeoException(Exception):
 class PymeoFeedItem(object):
     def __init__(self, json):
         self.__entry = json
+        self.__current = 0
     
     def __getattr__(self, name):
         return self.__entry[name]
@@ -46,6 +47,16 @@ class PymeoFeedItem(object):
     def __repr__(self):
         return unicode(self.__entry)
     
+    def __iter__(self):
+        self.__current = 0
+        return self
+    
+    def next(self):
+        if self.__current >= len(self.__entry):
+            raise StopIteration
+        else:
+            self.__current += 1
+            return self.__entry.keys()[self.__current]
 
 class PymeoVideo(PymeoFeedItem):
     pass
@@ -70,10 +81,13 @@ class PymeoFeed(object):
         if len(json) == 1:
             (self.type, self.__entries) = json.popitem()
     
+    def __len__(self):
+        return len(self.__entries)
+    
     def __iter__(self):
+        self.__current = 0
         return self
     
-    # TODO: check why the iterator can only be walked once
     def next(self):
         if self.__current >= len(self.__entries):
             raise StopIteration
