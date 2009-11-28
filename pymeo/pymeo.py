@@ -115,7 +115,8 @@ class Pymeo(OAuthConsumer):
             
             An instance not based on the advanced API will use the simple API.
         """
-        return (self.key is not None and self.secret is not None)
+        return (self.key and self.key is not None and \
+            self.secret and self.secret is not None)
     
     def get_video(self, video_id):
         feed = self.get_feed('videos.getInfo', {'video_id': video_id})
@@ -138,7 +139,20 @@ class Pymeo(OAuthConsumer):
         
         for v in json_res.values():
             if isinstance(v, dict):
+                # The response contains a feed (with page number and the likes)
                 return PymeoFeed(v, method, params)
+            elif isinstance(v, list):
+                # The response contains a single item (e.g. a video)
+                return PymeoFeed(
+                    {
+                        u'on_this_page': 1,
+                        u'perpage': 20,
+                        u'page': 1,
+                        u'total': 1,
+                        u'items': v,
+                    },
+                    method, params
+                )
         
         raise Exception('The requested method cannot return a feed')
     
@@ -186,6 +200,9 @@ class Pymeo(OAuthConsumer):
         elif method == 'vimeo.videos.getInfo':
             context = 'video'
             identifier = params['video_id']
+        elif method == 'vimeo.videos.getAppearsIn':
+            identifier = params['user_id']
+            request = 'appears_in'
         else:
             raise NotImplementedError('Method %s has not been implemented yet' % method)
         
@@ -220,8 +237,11 @@ class Pymeo(OAuthConsumer):
         }
         return json_res
     
-    def request_advanced(self, method, params, base_url=None):
+    def request_advanced(self, method, params=None, base_url=None):
         url = base_url or Pymeo.BASE_URL
+        
+        if params is None:
+            params = []
         
         # Build the OAuth part of the request
         auth_req = OAuthRequest().from_consumer_and_token(
@@ -260,11 +280,15 @@ class Pymeo(OAuthConsumer):
 
             This will call a URL such as (for example)
             http://vimeo.com/api/v2/activity/someuser/user_did.json?page=1
+            
+            The output of the method will be a dict in this form:
+            {'stat': '...', 'generated_in': '...', 'item_or_list': ...}
 
             @param context The context of the request, e.g. "activity"
             @param identifier The id for the request, e.g. "username"
             @param request The type of request, e.g. "user_did"
             @param query A dict representing a query to append, e.g {'page':1}
+            @return A dict representing the response
         """
         url = base_url or Pymeo.SIMPLE_URL
 
