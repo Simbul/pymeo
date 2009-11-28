@@ -42,6 +42,16 @@ def dummy_urlopen(req):
                 for k,v in query.iteritems():
                     j += ',"%s":"%s"' % (k, v[0])
                 j += '}'
+            elif method == 'vimeo.people.getInfo':
+                j = '{"stat":"ok","generated_in":"0.0106","person":{"id":"2638277","is_staff":"0","is_plus":"0","username":"simbul","display_name":"Simbul","location":"","url":"","number_of_contacts":"0","number_of_uploads":"0","number_of_likes":"3","number_of_videos":"0","number_of_videos_appears_in":"0","profileurl":"http:\/\/vimeo.com\/simbul\/","videosurl":"http:\/\/vimeo.com\/simbul\/videos\/"}}'
+            elif method == 'vimeo.videos.getLikes':
+                j = '{"stat":"ok","generated_in":"0.0432","videos":{"page":"1","perpage":"25","on_this_page":"3","video":['\
+                    '{"id":"7764570","liked_on":"2009-11-26 16:51:34","owner":"1696981","title":"Title1","privacy":"anybody","is_hd":"1"},'\
+                    '{"id":"7545734","liked_on":"2009-11-15 05:00:40","owner":"243010","title":"Title2","privacy":"anybody","is_hd":"1"},'\
+                    '{"id":"7112182","liked_on":"2009-11-15 04:54:49","owner":"807018","title":"Title3","privacy":"anybody","is_hd":"0"}'\
+                    ']}}'
+            else:
+                raise NotImplementedError('Method %s not supported by the mock urlopen method' % method)
         
     elif url.startswith(Pymeo.SIMPLE_URL):
         # Simple API
