@@ -57,6 +57,9 @@ class PymeoFeedItem(object):
         else:
             self.__current += 1
             return self.__entry.keys()[self.__current]
+    
+    def to_json(self):
+        return self.__entry
 
 class PymeoVideo(PymeoFeedItem):
     pass
@@ -79,8 +82,14 @@ class PymeoFeed(object):
         
         self.__current = 0
         if len(json) == 1:
-            (self.type, self.__entries) = json.popitem()
-    
+            (self.type, entries) = json.popitem()
+            if isinstance(entries, list):
+                self.__entries = entries
+            elif isinstance(entries, dict):
+                self.__entries = [entries]
+            else:
+                raise Exception('Cannot construct PymeoFeed')
+        
     def __len__(self):
         return len(self.__entries)
     
@@ -95,15 +104,6 @@ class PymeoFeed(object):
             self.__current += 1
             return PymeoFeedItem(self.__entries[self.__current-1])
     
-# {u'stat': u'ok', u'generated_in': u'0.2642',
-#  u'videos': {
-    # u'on_this_page': u'2', u'total': u'2', u'perpage': u'50',
-    # u'video': [
-        # {u'upload_date': u'2009-11-11 05:58:15', u'title': u'Know Your Meme: Auto Tune (featuring "Weird Al" Yankovic)', u'privacy': u'anybody', u'is_hd': u'1', u'embed_privacy': u'anywhere', u'owner': u'243010', u'id': u'7545734'}, 
-        # {u'upload_date': u'2009-10-17 05:53:00', u'title': u'IoT e Hardware Sociali (iCrocco)', u'privacy': u'anybody', u'is_hd': u'0', u'embed_privacy': u'anywhere', u'owner': u'807018', u'id': u'7112182'}
-    # ], u'page': u'1'
-#  }
-# }
 
 class Pymeo(OAuthConsumer):
     """
@@ -133,9 +133,18 @@ class Pymeo(OAuthConsumer):
             self.secret and self.secret is not None)
     
     def get_video(self, video_id):
-        feed = self.get_feed('videos.getInfo', {'video_id': video_id})
+        return self.get_feed_item('videos.getInfo', {'video_id': video_id}).to_video()
+    
+    def get_feed_item(self, method, params):
+        """
+            Return a single feed item.
+            
+            If the request provides a feed with more than a single item, only
+            the first one is returned.
+        """
+        feed = self.get_feed(method, params)
         for item in feed:
-            return item.to_video()
+            return item
     
     def get_feed(self, method, params):
         """
@@ -153,8 +162,21 @@ class Pymeo(OAuthConsumer):
         
         for v in json_res.values():
             if isinstance(v, dict):
-                # The response contains a feed (with page number and the likes)
-                return PymeoFeed(v, method, params)
+                if 'page' in v:
+                    # The response contains a feed (with page number and the likes)
+                    return PymeoFeed(v, method, params)
+                else:
+                    # The response contains an item
+                    return PymeoFeed(
+                        {
+                            u'on_this_page': 1,
+                            u'perpage': 20,
+                            u'page': 1,
+                            u'total': 1,
+                            u'items': [v],
+                        },
+                        method, params
+                    )
             elif isinstance(v, list):
                 # The response contains a single item (e.g. a video)
                 return PymeoFeed(
@@ -246,10 +268,40 @@ class Pymeo(OAuthConsumer):
                 u'on_this_page': len(json),
                 u'perpage': 20,
                 u'page': page,
-                u'items': json,
+                u'items': self.__map_simple_to_advanced(json),
             }
         }
         return json_res
+    
+    def __map_simple_to_advanced(self, simple_json):
+        """
+            Map a simple json response to an advanced one.
+            
+            Return a list, both if the parameter is a list and if it's a
+            single item.
+        """
+        if not isinstance(simple_json, list):
+            simple_json = [simple_json]
+        
+        out = []
+        for item in simple_json:
+            advanced_item = {}
+            for k,v in item.iteritems():
+                if k in mappings:
+                    # Transform according to mapping
+                    transform = mappings[k]
+                    if callable(transform):
+                        # Apply transformation function
+                        transform(k, v, advanced_item)
+                    else:
+                        # Just change the key in the dict
+                        advanced_item[transform] = unicode(v)
+                else:
+                    # Keep as-is
+                    advanced_item[k] = unicode(v)
+            out.append(advanced_item)
+                    
+        return out
     
     def request_advanced(self, method, params=None, base_url=None):
         url = base_url or Pymeo.BASE_URL
@@ -335,6 +387,88 @@ class Pymeo(OAuthConsumer):
         return out
     
 
+# {simple: advanced}
+def map_thumbnails(simple_key, simple_value, advanced_dict):
+    if not 'thumbnails' in advanced_dict:
+        advanced_dict['thumbnails'] = {}
+    if not 'thumbnail' in advanced_dict['thumbnails']:
+        advanced_dict['thumbnails']['thumbnail'] = []
+    if simple_key == 'thumbnail_small':
+        thumb = {u'width': u'100', u'height': u'75', u'_content': simple_value}
+    elif simple_key == 'thumbnail_medium':
+        thumb = {u'width': u'200', u'height': u'150', u'_content': simple_value}
+    elif simple_key == 'thumbnail_large':
+        thumb = {u'width': u'640', u'height': u'360', u'_content': simple_value}
+    
+    advanced_dict['thumbnails']['thumbnail'].append(thumb)
+
+def map_urls(simple_key, simple_value, advanced_dict):
+    if not 'urls' in advanced_dict:
+        advanced_dict['urls'] = {}
+    if not 'url' in advanced_dict['urls']:
+        advanced_dict['urls']['url'] = []
+    if simple_key == 'url':
+        url = {u'type': u'video', u'_content': simple_value}
+    
+    advanced_dict['urls']['url'].append(url)
+
+def map_portraits(simple_key, simple_value, advanced_dict):
+    if not 'owner' in advanced_dict:
+        advanced_dict['owner'] = {}
+    if not 'portraits' in advanced_dict['owner']:
+        advanced_dict['owner']['portraits'] = {}
+    if not 'portrait' in advanced_dict['owner']['portraits']:
+        advanced_dict['owner']['portraits']['portrait'] = []
+    
+    if simple_key == 'user_portrait_small':
+        portrait = {u'width': u'30', u'height': u'30', u'_content': simple_value}
+    elif simple_key == 'user_portrait_medium':
+        portrait = {u'width': u'75', u'height': u'75', u'_content': simple_value}
+    elif simple_key == 'user_portrait_large':
+        portrait = {u'width': u'100', u'height': u'100', u'_content': simple_value}
+    elif simple_key == 'user_portrait_huge':
+        portrait = {u'width': u'300', u'height': u'300', u'_content': simple_value}
+    
+    advanced_dict['owner']['portraits']['portrait'].append(portrait)
+
+def map_tags(simple_key, simple_value, advanced_dict):
+    if not 'tags' in advanced_dict:
+        advanced_dict['tags'] = {}
+    if not 'tag' in advanced_dict['tags']:
+        advanced_dict['tags']['tag'] = []
+    
+    if simple_key == 'tags':
+        for tag in simple_value.split(', '):
+            advanced_dict['tags']['tag'].append(
+                {u'content': simple_value}
+            )
+
+def map_owner(simple_key, simple_value, advanced_dict):
+    if not 'owner' in advanced_dict:
+        advanced_dict['owner'] = {}
+    
+    if simple_key == 'user_url':
+        advanced_dict['owner']['profileurl'] = simple_value
+    elif simple_key == 'user_name':
+        advanced_dict['owner']['display_name'] = simple_value
+
+
+mappings = {
+    'stats_number_of_comments': 'number_of_comments',
+    'stats_number_of_plays': 'number_of_plays',
+    'stats_number_of_likes': 'number_of_likes',
+    'thumbnail_small': map_thumbnails,
+    'thumbnail_medium': map_thumbnails,
+    'thumbnail_large': map_thumbnails,
+    'url': map_urls,
+    'user_portrait_small': map_portraits,
+    'user_portrait_medium': map_portraits,
+    'user_portrait_large': map_portraits,
+    'user_portrait_huge': map_portraits,
+    'tags': map_tags,
+    'user_url': map_owner,
+    'user_name': map_owner,
+}
 class User(object):
     def __init__(self, username):
         self.__username = username

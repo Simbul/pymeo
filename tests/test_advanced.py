@@ -66,6 +66,19 @@ class AdvancedTest(unittest.TestCase):
         self.assert_('video' in feed)
         self.assert_(isinstance(feed['video'], list))
     
+    def test_get_feed(self):
+        feed = self.__pymeo.get_feed('videos.getLikes', {'user_id':2638277})
+        self.__assert_feed_object(feed)
+        self.assertEquals(feed.page, 1)
+        self.assertEquals(feed.perpage, 50)
+        self.assertEquals(feed.on_this_page, len(feed))
+    
+    def test_get_video(self):
+        video = self.__pymeo.get_video(7545734)
+        self.__assert_feed_item(video)
+        self.assertEquals(video.id, u'7545734')
+    
+    
     def __assert_advanced_response(self, resp):
         self.assert_(isinstance(resp, dict))
         self.assert_("stat" in resp)
@@ -76,6 +89,17 @@ class AdvancedTest(unittest.TestCase):
         self.assert_('page' in feed)
         self.assert_('perpage' in feed)
         self.assert_('on_this_page' in feed)
+    
+    def __assert_feed_object(self, feed):
+        self.assert_(isinstance(feed, pymeo.PymeoFeed))
+        self.assert_(hasattr(feed, 'on_this_page'))
+        self.assert_(hasattr(feed, 'perpage'))
+        self.assert_(hasattr(feed, 'page'))
+        self.assert_(hasattr(feed, 'method'))
+        self.assert_(hasattr(feed, 'params'))
+    
+    def __assert_feed_item(self, item):
+        self.assert_(isinstance(item, pymeo.PymeoFeedItem))
     
 
 if __name__ == '__main__':
