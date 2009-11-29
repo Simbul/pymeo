@@ -92,10 +92,40 @@ class SimpleTest(unittest.TestCase):
             i -= 1
         self.assertEquals(i, 0)
     
+    def test_feed_extend(self):
+        feed = self.__pymeo.get_feed('videos.getLikes', {'user_id':2638277})
+        
+        items = []
+        items.extend({'title': item.title} for item in feed)
+        
+        self.assertEquals(len(items), len(feed))
+        i = 0
+        for item in feed:
+            self.assertEquals(items[i]['title'], item.title)
+            i += 1
+    
     def test_get_video(self):
         video = self.__pymeo.get_video(7545734)
-        self.__assert_feed_item(video)
+        self.__assert_video_item(video)
+        
+        self.assert_(video.get_thumbnail('small').endswith('100.jpg'))
+        self.assert_(video.get_thumbnail('medium').endswith('200.jpg'))
+        self.assert_(video.get_thumbnail('large').endswith('640.jpg'))
+        
+        self.assert_(video.get_video_url().endswith('7545734'))
+        
+        tags = video.get_tags_string()
+        self.assert_(isinstance(tags, unicode))
+        self.assert_(len(tags) > 0)
+        
+        # Huge defaults to medium for the time being
+        self.assert_(video.get_thumbnail('huge').endswith('200.jpg'))
     
+    def test_get_videos(self):
+        video_feed = self.__pymeo.get_feed('videos.getLikes', {'user_id': '2638277'})
+        self.__assert_feed_object(video_feed)
+        for item in video_feed:
+            self.__assert_video_item(item)
     
     def __assert_feed_object(self, feed):
         self.assert_(isinstance(feed, pymeo.PymeoFeed))
@@ -106,7 +136,10 @@ class SimpleTest(unittest.TestCase):
         self.assert_(hasattr(feed, 'params'))
     
     def __assert_feed_item(self, item):
-        self.assert_(isinstance(item, pymeo.PymeoFeedItem))
+        self.assert_(isinstance(item, pymeo.PymeoFeedItem), "Not an instance of PymeoFeedItem: found %s instead" % item.__class__.__name__)
+    
+    def __assert_video_item(self, item):
+        self.assert_(isinstance(item, pymeo.PymeoVideo), "Not an instance of PymeoVideo: found %s instead" % item.__class__.__name__)
     
 
 if __name__ == '__main__':

@@ -35,34 +35,58 @@ class VimeoException(Exception):
 
 class PymeoFeedItem(object):
     def __init__(self, json):
-        self.__entry = json
+        self._entry = json
         self.__current = 0
     
     def __getattr__(self, name):
-        return self.__entry[name]
+        return self._entry[name]
     
     def to_video(self):
-        return PymeoVideo(self.__entry)
+        return PymeoVideo(self._entry)
     
     def __repr__(self):
-        return unicode(self.__entry)
+        return unicode(self._entry)
     
     def __iter__(self):
         self.__current = 0
         return self
     
     def next(self):
-        if self.__current >= len(self.__entry):
+        if self.__current >= len(self._entry):
             raise StopIteration
         else:
             self.__current += 1
-            return self.__entry.keys()[self.__current]
+            return self._entry.keys()[self.__current]
     
     def to_json(self):
-        return self.__entry
+        return self._entry
 
 class PymeoVideo(PymeoFeedItem):
-    pass
+    def get_thumbnail(self, size="medium"):
+        if size == 'small':
+            width = 100
+        elif size == 'large':
+            width = 640
+        else:
+            width = 200
+        
+        for thumb in self._entry['thumbnails']['thumbnail']:
+            if thumb['width'] == unicode(width):
+                return thumb['_content']
+        
+        return ""
+    
+    def get_video_url(self):
+        for url in self._entry['urls']['url']:
+            if url['type'] == 'video':
+                return url['_content']
+    
+    def get_tags_string(self):
+        out = []
+        for tag in self._entry['tags']['tag']:
+            out.append(tag['_content'])
+        
+        return ", ".join(out)
     
 
 class PymeoFeed(object):
@@ -102,7 +126,11 @@ class PymeoFeed(object):
             raise StopIteration
         else:
             self.__current += 1
-            return PymeoFeedItem(self.__entries[self.__current-1])
+            entry = self.__entries[self.__current-1]
+            if 'upload_date' in entry:
+                return PymeoVideo(entry)
+            else:
+                return PymeoFeedItem(entry)
     
 
 class Pymeo(OAuthConsumer):
@@ -440,7 +468,7 @@ def map_tags(simple_key, simple_value, advanced_dict):
     if simple_key == 'tags':
         for tag in simple_value.split(', '):
             advanced_dict['tags']['tag'].append(
-                {u'content': simple_value}
+                {u'_content': simple_value}
             )
 
 def map_owner(simple_key, simple_value, advanced_dict):

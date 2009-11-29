@@ -96,6 +96,18 @@ class AdvancedTest(unittest.TestCase):
         video = self.__pymeo.get_video(7545734)
         self.__assert_feed_item(video)
         self.assertEquals(video.id, u'7545734')
+        
+        self.assert_(video.get_thumbnail('small').endswith('100.jpg'))
+        self.assert_(video.get_thumbnail('medium').endswith('200.jpg'))
+        self.assert_(video.get_thumbnail('large').endswith('640.jpg'))
+        
+        self.assert_(video.get_video_url().endswith('7545734'))
+    
+    def test_get_videos(self):
+        video_feed = self.__pymeo.get_feed('videos.getLikes', {'user_id': '2638277'})
+        self.__assert_feed_object(video_feed)
+        for item in video_feed:
+            self.__assert_video_item(item)
     
     
     def __assert_advanced_response(self, resp):
@@ -119,6 +131,9 @@ class AdvancedTest(unittest.TestCase):
     
     def __assert_feed_item(self, item):
         self.assert_(isinstance(item, pymeo.PymeoFeedItem))
+    
+    def __assert_video_item(self, item):
+        self.assert_(isinstance(item, pymeo.PymeoVideo), "Not an instance of PymeoVideo: found %s instead" % item.__class__.__name__)
     
 
 if __name__ == '__main__':
