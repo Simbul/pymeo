@@ -21,6 +21,7 @@
 import urllib2
 import json
 from oauth.oauth import *
+import re
 
 class VimeoException(Exception):
     def __init__(self, code, message, explaination=None):
@@ -62,19 +63,38 @@ class PymeoFeedItem(object):
         return self._entry
 
 class PymeoVideo(PymeoFeedItem):
-    def get_thumbnail(self, size="medium"):
-        if size == 'small':
-            width = 100
-        elif size == 'large':
-            width = 640
-        else:
-            width = 200
+    def get_thumbnail(self, size='medium', vimeo_default=True):
+        """
+            Return a thumbnail for the specified size.
+            
+            When vimeo_default is False, the method will try to avoid
+            returning the Vimeo default thumbnail, possibly falling back
+            to a smaller size.
+            
+            @param size Either small, medium, large or huge
+            @param vimeo_default A boolean
+        """
+        if not size in ('small', 'medium', 'large', 'huge'):
+            raise KeyError('Size "%s" is not a viable option' % size)
         
-        for thumb in self._entry['thumbnails']['thumbnail']:
-            if thumb['width'] == unicode(width):
-                return thumb['_content']
+        sizes = [
+            {'name': 'small', 'width': 100},
+            {'name': 'medium', 'width': 200},
+            {'name': 'large', 'width': 640},
+            {'name': 'huge', 'width': 1280},
+        ]
         
-        return ""
+        thumb = None
+        falling_back = False
+        for size_item in reversed(sizes):
+            if size_item['name'] == size or falling_back:
+                falling_back = True
+                thumb = self.__get_thumb_for_width(size_item['width'])
+                if thumb is not None:
+                    if vimeo_default: break
+                    elif (re.search(r'/default[^/]+$', thumb) is None): break
+        
+        return thumb or ""
     
     def get_video_url(self):
         for url in self._entry['urls']['url']:
@@ -87,6 +107,11 @@ class PymeoVideo(PymeoFeedItem):
             out.append(tag['_content'])
         
         return ", ".join(out)
+    
+    def __get_thumb_for_width(self, width):
+        for thumb in self._entry['thumbnails']['thumbnail']:
+            if thumb['width'] == unicode(width):
+                return thumb['_content']
     
 
 class PymeoFeed(object):

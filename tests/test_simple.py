@@ -118,14 +118,24 @@ class SimpleTest(unittest.TestCase):
         self.assert_(isinstance(tags, unicode))
         self.assert_(len(tags) > 0)
         
-        # Huge defaults to medium for the time being
-        self.assert_(video.get_thumbnail('huge').endswith('200.jpg'))
+        # Huge falls back to large
+        self.assert_(video.get_thumbnail('huge').endswith('640.jpg'))
     
     def test_get_videos(self):
         video_feed = self.__pymeo.get_feed('videos.getLikes', {'user_id': '2638277'})
         self.__assert_feed_object(video_feed)
         for item in video_feed:
             self.__assert_video_item(item)
+    
+    def test_thumb_fallback(self):
+        video = self.__pymeo.get_video(7545734)
+
+        # This call falls back on the 'large' size
+        self.assert_(video.get_thumbnail('huge').endswith('640.jpg'))
+
+        # This call falls back on the 'large' size too
+        self.assert_(video.get_thumbnail('huge', vimeo_default=False).endswith('640.jpg'))
+    
     
     def __assert_feed_object(self, feed):
         self.assert_(isinstance(feed, pymeo.PymeoFeed))

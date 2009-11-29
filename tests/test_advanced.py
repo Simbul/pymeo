@@ -109,6 +109,14 @@ class AdvancedTest(unittest.TestCase):
         for item in video_feed:
             self.__assert_video_item(item)
     
+    def test_thumb_fallback(self):
+        video = self.__pymeo.get_video(7545734)
+        
+        # This call returns the default image
+        self.assert_('default' in video.get_thumbnail('huge'))
+        
+        # This call falls back on the 'large' size
+        self.assert_(video.get_thumbnail('huge', vimeo_default=False).endswith('640.jpg'))
     
     def __assert_advanced_response(self, resp):
         self.assert_(isinstance(resp, dict))
