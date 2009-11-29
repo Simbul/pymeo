@@ -118,6 +118,17 @@ class AdvancedTest(unittest.TestCase):
         # This call falls back on the 'large' size
         self.assert_(video.get_thumbnail('huge', vimeo_default=False).endswith('640.jpg'))
     
+    def test_tags(self):
+        video = self.__pymeo.get_video(7545734)
+
+        tags = ["auto tune", "internet", "meme", "music", "mashup", "remix"]
+        self.assertEquals(len(video.tags['tag']), len(tags))
+        for t in video.tags['tag']:
+            self.assert_(t['_content'] in tags, 'Tag "%s" not found' % t['_content'])
+
+        self.assertEquals(video.get_tags_string(), ", ".join(tags))
+
+    
     def __assert_advanced_response(self, resp):
         self.assert_(isinstance(resp, dict))
         self.assert_("stat" in resp)

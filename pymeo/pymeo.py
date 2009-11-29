@@ -493,7 +493,7 @@ def map_tags(simple_key, simple_value, advanced_dict):
     if simple_key == 'tags':
         for tag in simple_value.split(', '):
             advanced_dict['tags']['tag'].append(
-                {u'_content': simple_value}
+                {u'_content': tag}
             )
 
 def map_owner(simple_key, simple_value, advanced_dict):

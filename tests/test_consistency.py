@@ -68,6 +68,7 @@ class CoherencyTest(unittest.TestCase):
                 self.__assert_json_is_subset(superset[k], v, k)
             elif isinstance(v, list):
                 # TODO: manage this case
+                self.assert_(len(v) <= len(superset[k]))
                 pass
             else:
                 self.assertEquals(v, superset[k])
