@@ -1,0 +1,41 @@
+Pymeo
+
+Pymeo is a Python wrapper for version 2 of the Vimeo APIs.
+
+The goal of Pymeo is to provide an abstraction over the APIs which is both consistent and easy to use.
+
+Consistency comes from the fact that Pymeo exposes a single interface, whereas Vimeo offers two: a simple API and an advanced API.
+The interface of Pymeo is based on the advanced API, which is more developer-friendly and consistent (not to mention more powerful).
+Pymeo is nonetheless able to use both APIs: in fact, the simple API is automatically used when OAuth data (i.e. consumer key and consumer secret) is not provided.
+
+Ease of use comes from the introduction of methods and classes which are on a higher level than the ones exposed by the Vimeo APIs. See USING FEEDS.
+
+Pymeo is licensed under the v3 of the LGPL.
+
+===========
+USING FEEDS
+===========
+The feed is the basic concept when retrieving a list of items (e.g. the list of all the uploaded videos for a user).
+A feed can be retrieved by using the Pymeo.get_feed() method.
+
+A feed is basically the representation of a "page" in a Vimeo API response. A single call to the Vimeo API cannot return more than 50 items[1]. That is, the output from the Vimeo API is divided in pages with a maximum length of 50 items.
+To get more than 50 items it is necessary to perform more than one call.
+
+Here's an example of how to print the titles of all the uploaded videos for a sample user called 'someuser':
+ 
+    pm = Pymeo(CONSUMER_KEY, CONSUMER_SECRET)
+    feed = pm.get_feed('videos.getUploads', {'user_id': 'someuser'})
+    while feed is not None:
+        for item in feed:
+            print item.title
+        
+        feed = pm.get_next_feed(feed)
+
+============
+KNOWN ISSUES
+============
+Pymeo is still in an early phase of development, and it's missing many functionalities of the Vimeo API - most notably the support for video uploads.
+
+
+___
+[1] 50 items while using the advanced API, 25 while using the simple API.
