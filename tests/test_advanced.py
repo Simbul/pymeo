@@ -156,4 +156,6 @@ class AdvancedTest(unittest.TestCase):
     
 
 if __name__ == '__main__':
+    if pymeo.urllib2.urlopen == mocks.dummy_urlopen:
+        print "Running tests against mock Vimeo server"
     unittest.main()

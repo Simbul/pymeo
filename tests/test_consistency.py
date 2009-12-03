@@ -30,7 +30,7 @@ import mocks
 # Comment the following line to run the test against the remote server
 pymeo.urllib2.urlopen = mocks.dummy_urlopen
 
-class CoherencyTest(unittest.TestCase):
+class ConsistencyTest(unittest.TestCase):
     def setUp(self):
         # Setup advanced API
         self.consumer_secret = self.consumer_key = None
@@ -74,4 +74,6 @@ class CoherencyTest(unittest.TestCase):
                 self.assertEquals(v, superset[k])
 
 if __name__ == '__main__':
+    if pymeo.urllib2.urlopen == mocks.dummy_urlopen:
+        print "Running tests against mock Vimeo server"
     unittest.main()
