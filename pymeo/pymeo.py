@@ -34,33 +34,17 @@ class VimeoException(Exception):
         return out
     
 
-class PymeoFeedItem(object):
-    def __init__(self, json):
-        self._entry = json
-        self.__current = 0
-    
+class PymeoDict(dict):
     def __getattr__(self, name):
-        return self._entry[name]
+        if isinstance(self[name], dict):
+            return PymeoDict(self[name])
+        return self[name]
     
+
+class PymeoFeedItem(PymeoDict):
     def to_video(self):
-        return PymeoVideo(self._entry)
+        return PymeoVideo(self)
     
-    def __repr__(self):
-        return unicode(self._entry)
-    
-    def __iter__(self):
-        self.__current = 0
-        return self
-    
-    def next(self):
-        if self.__current >= len(self._entry):
-            raise StopIteration
-        else:
-            self.__current += 1
-            return self._entry.keys()[self.__current]
-    
-    def to_json(self):
-        return self._entry
 
 class PymeoVideo(PymeoFeedItem):
     def get_thumbnail(self, size='medium', vimeo_default=True):
@@ -97,19 +81,19 @@ class PymeoVideo(PymeoFeedItem):
         return thumb or ""
     
     def get_video_url(self):
-        for url in self._entry['urls']['url']:
+        for url in self['urls']['url']:
             if url['type'] == 'video':
                 return url['_content']
     
     def get_tags_string(self):
         out = []
-        for tag in self._entry['tags']['tag']:
+        for tag in self['tags']['tag']:
             out.append(tag['_content'])
         
         return ", ".join(out)
     
     def __get_thumb_for_width(self, width):
-        for thumb in self._entry['thumbnails']['thumbnail']:
+        for thumb in self['thumbnails']['thumbnail']:
             if thumb['width'] == unicode(width):
                 return thumb['_content']
     
