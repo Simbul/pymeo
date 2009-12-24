@@ -22,7 +22,10 @@ sys.path.append('.')
 sys.path.append('..')
 
 import urllib2
-import json
+try:
+    import json
+except ImportError:
+    import simplejson as json
 import urlparse
 
 from pymeo.pymeo import Pymeo
@@ -35,6 +38,11 @@ class MockFileObject(object):
         # return json.dumps(self.__json)
         return self.__json
     
+if hasattr(urlparse, 'parse_qs'):
+    pymeo_parse_qs = urlparse.parse_qs
+else:
+    import cgi
+    pymeo_parse_qs = cgi.parse_qs
 
 def dummy_urlopen(req):
     """
@@ -46,7 +54,7 @@ def dummy_urlopen(req):
     url = req.get_full_url()
     if url.startswith(Pymeo.BASE_URL):
         # Advanced API
-        query = urlparse.parse_qs(urlparse.urlparse(url).query)
+        query = pymeo_parse_qs(urlparse.urlparse(url).query)
         
         if query['oauth_consumer_key'][0] == 'wrongkey':
             j = '{' \

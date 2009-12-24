@@ -21,10 +21,10 @@ from distutils.core import setup
 
 setup(
     name='Pymeo',
-    version='0.1',
-    description='Python wrapper for Vimeo Advanced APIs',
+    version='0.1.1',
+    description='Python wrapper for Vimeo APIs',
     author='Alessandro Morandi',
     author_email='webmaster@simbul.net',
     packages=['pymeo'],
-    install_requires=['oauth'],
+    install_requires=['oauth', 'simplejson'],
 )
