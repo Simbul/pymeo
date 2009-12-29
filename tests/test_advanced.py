@@ -127,7 +127,24 @@ class AdvancedTest(unittest.TestCase):
             self.assert_(t['_content'] in tags, 'Tag "%s" not found' % t['_content'])
 
         self.assertEquals(video.get_tags_string(), ", ".join(tags))
-
+    
+    def test_get_user(self):
+        user = self.__pymeo.get_user(2638277)
+        self.__assert_feed_item(user)
+        self.assertEquals(user.id, u'2638277')
+        self.assertFalse(hasattr(user, 'portraits'))
+    
+    def test_get_user_portraits(self):
+        user = self.__pymeo.get_user(2638277, portraits=True)
+        self.__assert_feed_item(user)
+        self.assertEquals(user.id, u'2638277')
+        self.assert_(hasattr(user, 'portraits'))
+        
+        self.assert_(user.get_portrait('small').endswith('30.jpg'))
+        self.assert_(user.get_portrait('medium').endswith('75.jpg'))
+        self.assert_(user.get_portrait('large').endswith('100.jpg'))
+        self.assert_(user.get_portrait('huge').endswith('300.jpg'))
+    
     
     def __assert_advanced_response(self, resp):
         self.assert_(isinstance(resp, dict))

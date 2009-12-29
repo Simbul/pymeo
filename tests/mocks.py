@@ -71,6 +71,8 @@ def dummy_urlopen(req):
                 j += '}'
             elif method == 'vimeo.people.getInfo':
                 j = '{"generated_in":"0.0442","stat":"ok","person":{"id":"2638277","is_plus":"0","is_staff":"0","username":"simbul","display_name":"Simbul","location":"","url":[""],"number_of_contacts":"0","number_of_uploads":"0","number_of_likes":"3","number_of_videos":"0","number_of_videos_appears_in":"0","profileurl":"http:\/\/vimeo.com\/simbul","videosurl":"http:\/\/vimeo.com\/simbul\/videos"}}'
+            elif method == 'vimeo.people.getPortraitUrls':
+                j = '{"generated_in":"0.1147","stat":"ok","portraits":{"portrait":[{"height":"30","width":"30","_content":"http:\/\/ps.vimeo.com.s3.amazonaws.com\/174\/174378_30.jpg"},{"height":"75","width":"75","_content":"http:\/\/ps.vimeo.com.s3.amazonaws.com\/174\/174378_75.jpg"},{"height":"100","width":"100","_content":"http:\/\/ps.vimeo.com.s3.amazonaws.com\/174\/174378_100.jpg"},{"height":"300","width":"300","_content":"http:\/\/ps.vimeo.com.s3.amazonaws.com\/174\/174378_300.jpg"}]}}'
             elif method == 'vimeo.videos.getLikes':
                 j = '{"generated_in":"0.1255","stat":"ok","videos":{'\
                     '"on_this_page":"3","page":"1","perpage":"50","total":"3","video":['\

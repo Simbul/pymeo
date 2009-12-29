@@ -48,6 +48,8 @@ class PymeoFeedItem(PymeoDict):
     def to_video(self):
         return PymeoVideo(self)
     
+    def to_user(self):
+        return PymeoUser(self)
 
 class PymeoVideo(PymeoFeedItem):
     def get_thumbnail(self, size='medium', vimeo_default=True):
@@ -55,10 +57,11 @@ class PymeoVideo(PymeoFeedItem):
             Return a thumbnail for the specified size.
             
             When vimeo_default is False, the method will try to avoid
-            returning the Vimeo default thumbnail, possibly falling back
-            to a smaller size.
+            returning the Vimeo default thumbnail (which does not show a frame
+            in the video, just a static image), possibly falling back to a
+            smaller size.
             
-            @param size Either small, medium, large or huge
+            @param size Either "small", "medium", "large" or "huge"
             @param vimeo_default A boolean
         """
         if not size in ('small', 'medium', 'large', 'huge'):
@@ -84,11 +87,17 @@ class PymeoVideo(PymeoFeedItem):
         return thumb or ""
     
     def get_video_url(self):
+        """
+            @return The URL for the video
+        """
         for url in self['urls']['url']:
             if url['type'] == 'video':
                 return url['_content']
     
     def get_tags_string(self):
+        """
+            @return A comma-separated string representing all the tags
+        """
         out = []
         for tag in self['tags']['tag']:
             out.append(tag['_content'])
@@ -100,6 +109,30 @@ class PymeoVideo(PymeoFeedItem):
             if thumb['width'] == unicode(width):
                 return thumb['_content']
     
+
+class PymeoUser(PymeoFeedItem):
+    def get_portrait(self, size='medium'):
+        if not size in ('small', 'medium', 'large', 'huge'):
+            raise KeyError('Size "%s" is not a viable option' % size)
+        
+        if not hasattr(self, 'portraits'):
+            return ""
+        
+        sizes = {
+            'small': 30,
+            'medium': 75,
+            'large': 100,
+            'huge': 300,
+        }
+        
+        portrait = self.__get_portrait_for_width(sizes[size])
+        
+        return portrait or ""
+    
+    def __get_portrait_for_width(self, width):
+        for portrait in self['portraits']['portrait']:
+            if portrait['width'] == unicode(width):
+                return portrait['_content']
 
 class PymeoFeed(object):
     def __init__(self, json_feed, method, params):
@@ -174,6 +207,19 @@ class Pymeo(OAuthConsumer):
     
     def get_video(self, video_id):
         return self.get_feed_item('videos.getInfo', {'video_id': video_id}).to_video()
+    
+    def get_user(self, user_id, portraits=False):
+        """
+            Return the user corresponding to the specified user_id.
+            
+            If the portraits parameter is True, perform an additional call
+            to retrieve the user's portrait URLs.
+        """
+        user = self.get_feed_item('people.getInfo', {'user_id': user_id}).to_user()
+        if portraits:
+            por = self.get_feed_item('people.getPortraitUrls', {'user_id': user_id})
+            user['portraits'] = por
+        return user
     
     def get_feed_item(self, method, params):
         """
@@ -509,6 +555,3 @@ mappings = {
     'user_url': map_owner,
     'user_name': map_owner,
 }
-class User(object):
-    def __init__(self, username):
-        self.__username = username
