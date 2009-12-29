@@ -145,6 +145,10 @@ class AdvancedTest(unittest.TestCase):
         self.assert_(user.get_portrait('large').endswith('100.jpg'))
         self.assert_(user.get_portrait('huge').endswith('300.jpg'))
     
+    def test_get_wrong_user(self):
+        user = self.__pymeo.get_user('totally_wrong_user_id')
+        self.assert_(user is None)
+    
     
     def __assert_advanced_response(self, resp):
         self.assert_(isinstance(resp, dict))

@@ -215,11 +215,29 @@ class Pymeo(OAuthConsumer):
             If the portraits parameter is True, perform an additional call
             to retrieve the user's portrait URLs.
         """
-        user = self.get_feed_item('people.getInfo', {'user_id': user_id}).to_user()
+        try:
+            user = self.get_feed_item('people.getInfo', {'user_id': user_id}).to_user()
+        except VimeoException, e:
+            if e.args[0] == "1":
+                # User not found -> return None
+                return None
+            else:
+                # All the other errors -> relay them
+                raise e
+        
         if portraits:
             por = self.get_feed_item('people.getPortraitUrls', {'user_id': user_id})
             user['portraits'] = por
         return user
+    
+    def get_user_from_email(self, email, portraits):
+        """
+            Equivalent to get_user(), but accepts an email instead of an id.
+        """
+        if ',' in email:
+            raise NotImplementedError('The method does not support multiple mail addresses')
+        
+        user_slim = self.get_feed_item('people.findByEmail', {'email': email})
     
     def get_feed_item(self, method, params):
         """
